@@ -160,6 +160,7 @@ class assFreestyleScanQuestion extends assQuestion implements ilObjQuestionScori
 			$image_filename       = str_replace(" ", "_", $image_filename);
 			$this->image_filename = $image_filename;
 		}
+
 		if(!empty($image_tempfilename))
 		{
 			$imagepath = $this->getImagePath();

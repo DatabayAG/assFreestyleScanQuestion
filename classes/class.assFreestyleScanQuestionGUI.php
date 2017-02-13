@@ -46,6 +46,11 @@ class assFreestyleScanQuestionGUI extends assQuestionGUI implements ilGuiQuestio
 	 */
 	protected function renderImage(ilTemplate $template, $imagepath)
 	{
+		if(!file_exists($imagepath) || !is_file($imagepath))
+		{
+			return;
+		}
+
 		require_once 'Services/WebAccessChecker/classes/class.ilWACSignedPath.php';
 		$template->setVariable('IMG_SRC', ilWACSignedPath::signFile($imagepath));
 		$template->setVariable('IMG_ALT', $this->object->getTitle());
@@ -87,7 +92,7 @@ class assFreestyleScanQuestionGUI extends assQuestionGUI implements ilGuiQuestio
 		{
 			require_once 'Services/Form/classes/class.ilPropertyFormGUI.php';
 			$this->writeQuestionGenericPostData();
-			$this->writeQuestionSpecificPostData(new ilPropertyFormGUI());
+			$this->writeQuestionSpecificPostData($this->form);
 			$this->saveTaxonomyAssignments();
 			return 0;
 		}
@@ -99,20 +104,12 @@ class assFreestyleScanQuestionGUI extends assQuestionGUI implements ilGuiQuestio
 	 */
 	public function writeQuestionSpecificPostData(ilPropertyFormGUI $form)
 	{
-		if($this->ctrl->getCmd() == 'deleteImage')
+		if(isset($_POST['image_delete']) && (int)$_POST['image_delete'])
 		{
-			/// @todo: Delete
 			$this->object->deleteImage();
 		}
-		else
-		{
-			if(strlen($_FILES['image']['tmp_name']) == 0)
-			{
-				$this->object->setImageFilename($_POST['image_name']);
-			}
-		}
 
-		if(strlen($_FILES['image']['tmp_name']))
+		if(strlen($_FILES['image']['tmp_name']) > 0)
 		{
 			if($this->object->getSelfAssessmentEditingMode() && $this->object->getId() < 1)
 			{
@@ -398,7 +395,6 @@ class assFreestyleScanQuestionGUI extends assQuestionGUI implements ilGuiQuestio
 		$form->addItem($points);
 
 		$image = new ilImageFileInputGUI($this->lng->txt('image'), 'image');
-		$image->setRequired( true );
 		if(strlen($this->object->getImageFilename()))
 		{
 			$image->setImage($this->object->getImagePathWeb() . $this->object->getImageFilename());
