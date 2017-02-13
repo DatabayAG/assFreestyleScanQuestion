@@ -1,6 +1,14 @@
 <p>{QUESTIONTEXT}</p>
-<p class="ilClearFloat"><img class="imagemap" border="0" src="{IMG_SRC}" alt="{IMG_ALT}" title="{IMG_TITLE}" /></p>
-<div>
+<p class="ilClearFloat"><img src="{IMG_SRC}" alt="{IMG_ALT}" title="{IMG_TITLE}" class="img-responsive" /></p>
+<div class="assFileUpload">
+	<!-- BEGIN files -->
+	<div class="filesContainer">{FILES}</div>
+	<!-- END files -->
+	<h2>{TXT_UPLOAD_FILE}</h2>
+	<div class="uploadContainer">
+		<input type="file" name="upload" disabled readonly />
+		<input type="submit" class="btn btn-default" name="cmd[{CMD_UPLOAD}]" value="{TEXT_UPLOAD}" disabled readonly />
+	</div>
 	<!-- BEGIN icon_ok -->
 	<img src="{ICON_OK}" alt="{TEXT_OK}" title="{TEXT_OK}"/>
 	<!-- END icon_ok -->

@@ -403,75 +403,75 @@ class assFreestyleScanQuestion extends assQuestion implements ilObjQuestionScori
 
 	/**
 	 * Check file upload
-	 *
-	 * @return	boolean Input ok, true/false
+	 * @return boolean Input ok, true/false
 	 */
-	function checkUpload()
+	protected function checkUpload()
 	{
-		$this->lng->loadLanguageModule("form");
+		$this->lng->loadLanguageModule('form');
+
 		// remove trailing '/'
-		while (substr($_FILES["upload"]["name"],-1) == '/')
+		while(substr($_FILES['upload']['name'], -1) == '/')
 		{
-			$_FILES["upload"]["name"] = substr($_FILES["upload"]["name"],0,-1);
+			$_FILES['upload']['name'] = substr($_FILES['upload']['name'], 0, -1);
 		}
 
-		$filename = $_FILES["upload"]["name"];
-		$filename_arr = pathinfo($_FILES["upload"]["name"]);
-		$suffix = $filename_arr["extension"];
-		$mimetype = $_FILES["upload"]["type"];
-		$size_bytes = $_FILES["upload"]["size"];
-		$temp_name = $_FILES["upload"]["tmp_name"];
-		$error = $_FILES["upload"]["error"];
+		$filename     = $_FILES['upload']['name'];
+		$filename_arr = pathinfo($_FILES['upload']['name']);
+		$suffix       = $filename_arr['extension'];
+		$mimetype     = $_FILES['upload']['type'];
+		$size_bytes   = $_FILES['upload']['size'];
+		$temp_name    = $_FILES['upload']['tmp_name'];
+		$error        = $_FILES['upload']['error'];
 
 		// error handling
-		if ($error > 0)
+		if($error > 0)
 		{
-			switch ($error)
+			switch($error)
 			{
 				case UPLOAD_ERR_INI_SIZE:
-					ilUtil::sendFailure($this->lng->txt("form_msg_file_size_exceeds"), true);
+					ilUtil::sendFailure($this->lng->txt('form_msg_file_size_exceeds'), true);
 					return false;
 					break;
 
 				case UPLOAD_ERR_FORM_SIZE:
-					ilUtil::sendFailure($this->lng->txt("form_msg_file_size_exceeds"), true);
+					ilUtil::sendFailure($this->lng->txt('form_msg_file_size_exceeds'), true);
 					return false;
 					break;
 
 				case UPLOAD_ERR_PARTIAL:
-					ilUtil::sendFailure($this->lng->txt("form_msg_file_partially_uploaded"), true);
+					ilUtil::sendFailure($this->lng->txt('form_msg_file_partially_uploaded'), true);
 					return false;
 					break;
 
 				case UPLOAD_ERR_NO_FILE:
-					ilUtil::sendFailure($this->lng->txt("form_msg_file_no_upload"), true);
+					ilUtil::sendFailure($this->lng->txt('form_msg_file_no_upload'), true);
 					return false;
 					break;
 
 				case UPLOAD_ERR_NO_TMP_DIR:
-					ilUtil::sendFailure($this->lng->txt("form_msg_file_missing_tmp_dir"), true);
+					ilUtil::sendFailure($this->lng->txt('form_msg_file_missing_tmp_dir'), true);
 					return false;
 					break;
 
 				case UPLOAD_ERR_CANT_WRITE:
-					ilUtil::sendFailure($this->lng->txt("form_msg_file_cannot_write_to_disk"), true);
+					ilUtil::sendFailure($this->lng->txt('form_msg_file_cannot_write_to_disk'), true);
 					return false;
 					break;
 
 				case UPLOAD_ERR_EXTENSION:
-					ilUtil::sendFailure($this->lng->txt("form_msg_file_upload_stopped_ext"), true);
+					ilUtil::sendFailure($this->lng->txt('form_msg_file_upload_stopped_ext'), true);
 					return false;
 					break;
 			}
 		}
 
 		// virus handling
-		if (strlen($temp_name))
+		if(strlen($temp_name))
 		{
 			$vir = ilUtil::virusHandling($temp_name, $filename);
-			if ($vir[0] == false)
+			if($vir[0] == false)
 			{
-				ilUtil::sendFailure($this->lng->txt("form_msg_file_virus_found")."<br />".$vir[1], true);
+				ilUtil::sendFailure($this->lng->txt('form_msg_file_virus_found') . '<br />' . $vir[1], true);
 				return false;
 			}
 		}
@@ -633,16 +633,16 @@ class assFreestyleScanQuestion extends assQuestion implements ilObjQuestionScori
 	public function saveWorkingData($active_id, $pass = NULL, $authorized = true)
 	{
 		global $ilDB;
-		global $ilUser;
 
-		if (is_null($pass))
+		if(is_null($pass))
 		{
 			include_once "./Modules/Test/classes/class.ilObjTest.php";
 			$pass = ilObjTest::_getPass($active_id);
 		}
 
-		if( $_POST['cmd'][$this->questionActionCmd] != $this->lng->txt('delete')
-			&& strlen($_FILES["upload"]["tmp_name"]) )
+		if($_POST['cmd'][$this->questionActionCmd] != $this->lng->txt('delete')
+			&& strlen($_FILES["upload"]["tmp_name"])
+		)
 		{
 			$checkUploadResult = $this->checkUpload();
 		}
@@ -651,14 +651,14 @@ class assFreestyleScanQuestion extends assQuestion implements ilObjQuestionScori
 			$checkUploadResult = false;
 		}
 
-		$result = $ilDB->queryF("SELECT test_fi FROM tst_active WHERE active_id = %s",
+		$result  = $ilDB->queryF("SELECT test_fi FROM tst_active WHERE active_id = %s",
 			array('integer'),
 			array($active_id)
 		);
 		$test_id = 0;
-		if ($result->numRows() == 1)
+		if($result->numRows() == 1)
 		{
-			$row = $ilDB->fetchAssoc($result);
+			$row     = $ilDB->fetchAssoc($result);
 			$test_id = $row["test_fi"];
 		}
 
@@ -667,9 +667,10 @@ class assFreestyleScanQuestion extends assQuestion implements ilObjQuestionScori
 		$this->updateCurrentSolutionsAuthorization($active_id, $pass, $authorized);
 
 		$entered_values = false;
-		if( $_POST['cmd'][$this->questionActionCmd] == $this->lng->txt('delete') )
+
+		if($_POST['cmd'][$this->questionActionCmd] == $this->lng->txt('delete'))
 		{
-			if (is_array($_POST['deletefiles']) && count($_POST['deletefiles']) > 0)
+			if(is_array($_POST['deletefiles']) && count($_POST['deletefiles']) > 0)
 			{
 				$this->deleteUploadedFiles($_POST['deletefiles'], $test_id, $active_id, $authorized);
 			}
@@ -678,17 +679,17 @@ class assFreestyleScanQuestion extends assQuestion implements ilObjQuestionScori
 				ilUtil::sendInfo($this->lng->txt('no_checkbox'), true);
 			}
 		}
-		elseif( $checkUploadResult )
+		else if($checkUploadResult)
 		{
 			if(!@file_exists($this->getFileUploadPath($test_id, $active_id)))
 			{
 				ilUtil::makeDirParents($this->getFileUploadPath($test_id, $active_id));
 			}
 
-			$version = time();
+			$version      = time();
 			$filename_arr = pathinfo($_FILES["upload"]["name"]);
-			$extension = $filename_arr["extension"];
-			$newfile = "file_" . $active_id . "_" . $pass . "_" . $version . "." . $extension;
+			$extension    = $filename_arr["extension"];
+			$newfile      = "file_" . $active_id . "_" . $pass . "_" . $version . "." . $extension;
 
 			ilUtil::moveUploadedFile($_FILES["upload"]["tmp_name"], $_FILES["upload"]["name"], $this->getFileUploadPath($test_id, $active_id) . $newfile);
 
@@ -699,20 +700,19 @@ class assFreestyleScanQuestion extends assQuestion implements ilObjQuestionScori
 
 		$this->getProcessLocker()->releaseUserSolutionUpdateLock();
 
-		if ($entered_values)
+		require_once 'Modules/Test/classes/class.ilObjAssessmentFolder.php';
+		if($entered_values)
 		{
-			include_once ("./Modules/Test/classes/class.ilObjAssessmentFolder.php");
-			if (ilObjAssessmentFolder::_enabledAssessmentLogging())
+			if(ilObjAssessmentFolder::_enabledAssessmentLogging())
 			{
-				$this->logAction($this->lng->txtlng("assessment", "log_user_entered_values", ilObjAssessmentFolder::_getLogLanguage()), $active_id, $this->getId());
+				$this->logAction($this->lng->txtlng('assessment', 'log_user_entered_values', ilObjAssessmentFolder::_getLogLanguage()), $active_id, $this->getId());
 			}
 		}
 		else
 		{
-			include_once ("./Modules/Test/classes/class.ilObjAssessmentFolder.php");
-			if (ilObjAssessmentFolder::_enabledAssessmentLogging())
+			if(ilObjAssessmentFolder::_enabledAssessmentLogging())
 			{
-				$this->logAction($this->lng->txtlng("assessment", "log_user_not_entered_values", ilObjAssessmentFolder::_getLogLanguage()), $active_id, $this->getId());
+				$this->logAction($this->lng->txtlng('assessment', 'log_user_not_entered_values', ilObjAssessmentFolder::_getLogLanguage()), $active_id, $this->getId());
 			}
 		}
 

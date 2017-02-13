@@ -41,6 +41,18 @@ class assFreestyleScanQuestionGUI extends assQuestionGUI implements ilGuiQuestio
 	}
 
 	/**
+	 * @param ilTemplate $template
+	 * @param $imagepath
+	 */
+	protected function renderImage(ilTemplate $template, $imagepath)
+	{
+		require_once 'Services/WebAccessChecker/classes/class.ilWACSignedPath.php';
+		$template->setVariable('IMG_SRC', ilWACSignedPath::signFile($imagepath));
+		$template->setVariable('IMG_ALT', $this->object->getTitle());
+		$template->setVariable("IMG_TITLE", $this->object->getTitle());
+	}
+
+	/**
 	 * @inheritdoc
 	 */
 	public function editQuestion($checkonly = FALSE)
@@ -117,18 +129,33 @@ class assFreestyleScanQuestionGUI extends assQuestionGUI implements ilGuiQuestio
 	 */
 	public function getPreview($show_question_only = FALSE, $showInlineFeedback = false)
 	{
-		$imagepath = $this->object->getImagePath() . $this->object->getImageFilename();
-
 		$template = $this->getOutputTemplate(self::$DEFAULT_PREVIEW_TEMPLATE);
+
+		if(is_object($this->getPreviewSession()))
+		{
+			$files = $this->object->getPreviewFileUploads($this->getPreviewSession());
+			require_once 'Modules/TestQuestionPool/classes/tables/class.assFileUploadFileTableGUI.php';
+			$table_gui = new assFileUploadFileTableGUI(null , $this->getQuestionActionCmd(), 'ilAssQuestionPreview');
+			$table_gui->setTitle($this->lng->txt('already_delivered_files'), 'icon_file.svg', $this->lng->txt('already_delivered_files'));
+			$table_gui->setData($files);
+			$table_gui->init();
+
+			$template->setCurrentBlock('files');
+			$template->setVariable('FILES', $table_gui->getHTML());
+			$template->parseCurrentBlock();
+		}
+
+		$imagepath = $this->object->getImagePath() . $this->object->getImageFilename();
 
 		$questiontext = $this->object->getQuestion();
 
 		$template->setVariable('QUESTIONTEXT', $this->object->prepareTextareaOutput($questiontext, TRUE));
 
-		require_once  'Services/WebAccessChecker/classes/class.ilWACSignedPath.php';
-		$template->setVariable('IMG_SRC', ilWACSignedPath::signFile($imagepath));
-		$template->setVariable('IMG_ALT', $this->object->getTitle());
-		$template->setVariable("IMG_TITLE", $this->object->getTitle());
+		$template->setVariable('CMD_UPLOAD', $this->getQuestionActionCmd());
+		$template->setVariable('TEXT_UPLOAD', $this->object->prepareTextareaOutput($this->lng->txt('upload')));
+		$template->setVariable('TXT_UPLOAD_FILE', $this->object->prepareTextareaOutput($this->lng->txt('file_add')));
+
+		$this->renderImage($template, $imagepath);
 
 		$questionoutput = $template->get();
 		if (!$show_question_only)
@@ -144,7 +171,7 @@ class assFreestyleScanQuestionGUI extends assQuestionGUI implements ilGuiQuestio
 	 */
 	function getSpecificFeedbackOutput($active_id, $pass)
 	{
-		$output = "";
+		$output = '';
 		return $this->object->prepareTextareaOutput($output, TRUE);
 	}
 
@@ -153,76 +180,99 @@ class assFreestyleScanQuestionGUI extends assQuestionGUI implements ilGuiQuestio
 	 */
 	public function getSolutionOutput($active_id, $pass = null, $graphicalOutput = false, $result_output = false, $show_question_only = true, $show_feedback = false, $show_correct_solution = false, $show_manual_scoring = false, $show_question_text = true)
 	{
-		// get the solution of the user for the active pass or from the last pass if allowed
-		$user_solutions = array();
+		$template = $this->getOutputTemplate(self::$SOLUTION_TEMPLATE);
+
+		$solutionvalue = "";
 		if (($active_id > 0) && (!$show_correct_solution))
 		{
-			$solutions =& $this->object->getSolutionValues($active_id, $pass);
-			foreach ($solutions as $idx => $solution_value)
+			$solutions = $this->object->getSolutionValues($active_id, $pass);
+			require_once 'Modules/Test/classes/class.ilObjTest.php';
+			if(!ilObjTest::_getUsePreviousAnswers($active_id, true))
 			{
-				$user_solutions[] = $solution_value["value2"];
+				if (is_null($pass)) $pass = ilObjTest::_getPass($active_id);
 			}
-		}
-		else
-		{
-			$best_solutions = array();
+			$solutions = $this->object->getSolutionValues($active_id, $pass);
+
+			$files = ($show_manual_scoring) ? $this->object->getUploadedFilesForWeb($active_id, $pass) : $this->object->getUploadedFiles($active_id, $pass);
+			include_once "./Modules/TestQuestionPool/classes/tables/class.assFileUploadFileTableGUI.php";
+			$table_gui = new assFileUploadFileTableGUI($this->getTargetGuiClass(), 'gotoquestion');
+			$table_gui->setTitle($this->lng->txt('already_delivered_files'), 'icon_file.svg', $this->lng->txt('already_delivered_files'));
+			$table_gui->setData($files);
+			$table_gui->init();
+			$table_gui->setRowTemplate("tpl.il_as_qpl_fileupload_file_view_row.html", 'Modules/TestQuestionPool');
+			$table_gui->setSelectAllCheckbox("");
+			$table_gui->clearCommandButtons();
+			$table_gui->disable('select_all');
+			$table_gui->disable('numinfo');
+
+			$template->setCurrentBlock('files');
+			$template->setVariable('FILES', $table_gui->getHTML());
+			$template->parseCurrentBlock();
 		}
 
-
-		// generate the question output
-		#include_once "./classes/class.ilTemplate.php";
-		$solution_template = new ilTemplate("tpl.il_as_tst_solution_output.html",true, true, "Modules/TestQuestionPool");
-		$template = $this->getOutputTemplate(self::$SOLUTION_TEMPLATE, $user_solutions);
+		$template->setVariable('CMD_UPLOAD', $this->getQuestionActionCmd());
+		$template->setVariable('TEXT_UPLOAD', $this->object->prepareTextareaOutput($this->lng->txt('upload')));
+		$template->setVariable('TXT_UPLOAD_FILE', $this->object->prepareTextareaOutput($this->lng->txt('file_add')));
 
 		if (($active_id > 0) && (!$show_correct_solution))
 		{
+			$reached_points = $this->object->getReachedPoints($active_id, $pass);
 			if ($graphicalOutput)
 			{
 				// output of ok/not ok icons for user entered solutions
-				$reached_points = $this->object->getReachedPoints($active_id, $pass);
 				if ($reached_points == $this->object->getMaximumPoints())
 				{
-					$template->setCurrentBlock("icon_ok");
-					$template->setVariable("ICON_OK", ilUtil::getImagePath("icon_ok.svg"));
-					$template->setVariable("TEXT_OK", $this->lng->txt("answer_is_right"));
+					$template->setCurrentBlock('icon_ok');
+					$template->setVariable('ICON_OK', ilUtil::getImagePath('icon_ok.svg'));
+					$template->setVariable('TEXT_OK', $this->lng->txt('answer_is_right'));
 					$template->parseCurrentBlock();
 				}
 				else
 				{
-					$template->setCurrentBlock("icon_ok");
+					$template->setCurrentBlock('icon_ok');
 					if ($reached_points > 0)
 					{
-						$template->setVariable("ICON_NOT_OK", ilUtil::getImagePath("icon_mostly_ok.svg"));
-						$template->setVariable("TEXT_NOT_OK", $this->lng->txt("answer_is_not_correct_but_positive"));
+						$template->setVariable('ICON_NOT_OK', ilUtil::getImagePath('icon_mostly_ok.svg'));
+						$template->setVariable('TEXT_NOT_OK', $this->lng->txt('answer_is_not_correct_but_positive'));
 					}
 					else
 					{
-						$template->setVariable("ICON_NOT_OK", ilUtil::getImagePath("icon_not_ok.svg"));
-						$template->setVariable("TEXT_NOT_OK", $this->lng->txt("answer_is_wrong"));
+						$template->setVariable('ICON_NOT_OK', ilUtil::getImagePath('icon_not_ok.svg'));
+						$template->setVariable('TEXT_NOT_OK', $this->lng->txt('answer_is_wrong'));
 					}
 					$template->parseCurrentBlock();
 				}
 			}
 		}
-		$template->setVariable("QUESTIONTEXT", $this->object->getQuestion());
-		$template->setVariable("ID_COUNTER", uniqid());
-
-		$feedback = ($show_feedback) ? $this->getAnswerFeedbackOutput($active_id, $pass) : "";
-
-		if (strlen($feedback)) $solution_template->setVariable("FEEDBACK", $feedback);
-
-		$solution_template->setVariable("SOLUTION_OUTPUT", $template->get());
-
-		$output = $solution_template->get();
-
-		if (!$show_question_only)
+		else
 		{
-			// get page object output
-			$output = $this->getILIASPage($output);
+			$reached_points = $this->object->getPoints();
 		}
 
-		return $output;
+		if($result_output)
+		{
+			$resulttext = ($reached_points == 1) ? "(%s " . $this->lng->txt("point") . ")" : "(%s " . $this->lng->txt("points") . ")";
+			$template->setVariable("RESULT_OUTPUT", sprintf($resulttext, $reached_points));
+		}
+		if($show_question_text == true)
+		{
+			$template->setVariable("QUESTIONTEXT", $this->object->prepareTextareaOutput($this->object->getQuestion(), TRUE));
+		}
 
+		$this->renderImage($template, $this->object->getImagePath() . $this->object->getImageFilename());
+
+		$questionoutput   = $template->get();
+		$solutiontemplate = new ilTemplate("tpl.il_as_tst_solution_output.html", TRUE, TRUE, "Modules/TestQuestionPool");
+		$feedback         = ($show_feedback && !$this->isTestPresentationContext()) ? $this->getAnswerFeedbackOutput($active_id, $pass) : "";
+		if(strlen($feedback)) $solutiontemplate->setVariable("FEEDBACK", $feedback);
+		$solutiontemplate->setVariable("SOLUTION_OUTPUT", $questionoutput);
+		$solutionoutput = $solutiontemplate->get();
+		if(!$show_question_only)
+		{
+			// get page object output
+			$solutionoutput = $this->getILIASPage($solutionoutput);
+		}
+		return $solutionoutput;
 	}
 
 	/**
@@ -378,30 +428,45 @@ class assFreestyleScanQuestionGUI extends assQuestionGUI implements ilGuiQuestio
 	 */
 	public function getTestOutput($active_id, $pass = null, $is_postponed = false, $use_post_solutions = false, $show_feedback = false)
 	{
-		// get the solution of the user for the active pass or from the last pass if allowed
-		$user_solution = array();
+		$template = $this->getOutputTemplate(self::$DEFAULT_PREVIEW_TEMPLATE);
+
 		if($active_id)
 		{
-			require_once './Modules/Test/classes/class.ilObjTest.php';
+			$solutions = NULL;
+			require_once 'Modules/Test/classes/class.ilObjTest.php';
 			if(!ilObjTest::_getUsePreviousAnswers($active_id, true))
 			{
-				if (is_null($pass)) $pass = ilObjTest::_getPass($active_id);
+				if(is_null($pass)) $pass = ilObjTest::_getPass($active_id);
 			}
 
-			$solutions = $this->object->getUserSolutionPreferingIntermediate($active_id, $pass);
-			if(is_array($solutions))
-			{
-				foreach($solutions as $solution)
-				{
-					$user_solution[$solution['value1']] = $solution['value2'];
-				}
-			}
+			// $files = $this->object->getUploadedFiles($active_id, $pass); // does not prefer intermediate but orders tstamp
+			$files = $this->object->getUserSolutionPreferingIntermediate($active_id, $pass);
+			include_once "./Modules/TestQuestionPool/classes/tables/class.assFileUploadFileTableGUI.php";
+			$table_gui = new assFileUploadFileTableGUI(null, $this->getQuestionActionCmd());
+			$table_gui->setTitle($this->lng->txt('already_delivered_files'), 'icon_file.svg', $this->lng->txt('already_delivered_files'));
+			$table_gui->setData($files);
+			$table_gui->init();
+
+			$template->setCurrentBlock('files');
+			$template->setVariable('FILES', $table_gui->getHTML());
+			$template->parseCurrentBlock();
 		}
 
-		$tpl = $this->getOutputTemplate(self::$DEFAULT_PREVIEW_TEMPLATE, $user_solution, true);
-		$output = $tpl->get();
+		$template->setVariable('QUESTIONTEXT', $this->object->prepareTextareaOutput($this->object->question, TRUE));
+		$template->setVariable('CMD_UPLOAD', $this->getQuestionActionCmd());
+		$template->setVariable('TEXT_UPLOAD', $this->object->prepareTextareaOutput($this->lng->txt('upload')));
 
-		return $this->outQuestionPage("", $is_postponed, $active_id, $output);
+		$this->renderImage($template, $this->object->getImagePath() . $this->object->getImageFilename());
+
+		$questionoutput = $template->get();
+		if(!$show_question_only)
+		{
+			// get page object output
+			$questionoutput = $this->getILIASPage($questionoutput);
+		}
+		$pageoutput = $this->outQuestionPage("", $is_postponed, $active_id, $questionoutput);
+
+		return $pageoutput;
 	}
 
 	/**
@@ -411,7 +476,7 @@ class assFreestyleScanQuestionGUI extends assQuestionGUI implements ilGuiQuestio
 	 *
 	 * @return string
 	 */
-	private function getOutputTemplate($tpl_name, $solutions = array(), $for_test = false)
+	private function getOutputTemplate($tpl_name)
 	{
 		$tpl = $this->plugin->getTemplate($tpl_name);
 
@@ -422,20 +487,6 @@ class assFreestyleScanQuestionGUI extends assQuestionGUI implements ilGuiQuestio
 		$tpl->setVariable("SRC_IMAGE", $this->object->getImagePathWeb() . $this->object->getImagePath());
 
 		return $tpl;
-	}
-
-	/**
-	 * Handles the file input for ilassFreestyleScanQuestionPlugin
-	 *
-	 * @param array $input
-	 */
-	private function handleFileUpload($input)
-	{
-		if(strlen($input['tmp_name'])) {
-			$this->object->setImage($input['name'], $input['tmp_name']);
-		} else {
-			$this->object->setImage($input['name']);
-		}
 	}
 
 	/**
