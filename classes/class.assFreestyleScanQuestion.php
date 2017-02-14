@@ -168,6 +168,7 @@ class assFreestyleScanQuestion extends assQuestion implements ilObjQuestionScori
 			{
 				ilUtil::makeDirParents($imagepath);
 			}
+
 			if(!ilUtil::moveUploadedFile($image_tempfilename, $image_filename, $imagepath . $image_filename))
 			{
 				$this->ilias->raiseError("The image could not be uploaded!", $this->ilias->error_obj->MESSAGE);
@@ -610,8 +611,12 @@ class assFreestyleScanQuestion extends assQuestion implements ilObjQuestionScori
 	public function deleteImage()
 	{
 		$file = $this->getImagePath() . $this->getImageFilename();
-		@unlink($file);
-		$this->image_filename = '';
+
+		if(file_exists($file))
+		{
+			unlink($file);
+			$this->image_filename = '';
+		}
 	}
 
 	protected function deletePreviewFileUploads($userId, $userSolution, $files)

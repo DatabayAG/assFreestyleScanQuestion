@@ -115,6 +115,7 @@ class assFreestyleScanQuestionGUI extends assQuestionGUI implements ilGuiQuestio
 			{
 				$this->object->createNewQuestion();
 			}
+			$this->object->deleteImage();
 			$this->object->setImageFilename($_FILES['image']['name'], $_FILES['image']['tmp_name']);
 		}
 
