@@ -4,6 +4,7 @@
 require_once 'Modules/TestQuestionPool/classes/class.assQuestion.php';
 require_once 'Modules/TestQuestionPool/interfaces/interface.ilObjQuestionScoringAdjustable.php';
 require_once 'Modules/TestQuestionPool/interfaces/interface.ilObjFileHandlingQuestionType.php';
+require_once 'Customizing/global/plugins/Modules/TestQuestionPool/Questions/assFreestyleScanQuestion/classes/class.ilassFreestyleScanQuestionPlugin.php';
 
 /**
  * Class assFreestyleScanQuestion
@@ -368,6 +369,51 @@ class assFreestyleScanQuestion extends assQuestion implements ilObjQuestionScori
 		}
 	}
 
+	public function moveScanAssessmentImageToRegularPlaceAfterImport()
+	{
+		global $ilDB;
+
+		$result = $ilDB->query('SELECT * FROM tst_solutions WHERE value1 = value2;');
+
+		if ($result->numRows() > 0)
+		{
+			while ($data = $ilDB->fetchAssoc($result))
+			{
+				$path = $data['value1'];
+				$tst_active = $ilDB->queryF("SELECT test_fi FROM tst_active WHERE active_id = %s",
+					array('integer'),
+					array($data["active_fi"])
+				);
+				$row = $ilDB->fetchAssoc($tst_active);
+				$test_id = $row["test_fi"];
+				if(substr( $path, 0, 34 ) === './data/default/scanAssessment/tst_')
+				{
+						$new_path = CLIENT_WEB_DIR . '/assessment/tst_'.$test_id.'/'.$data["active_fi"].'/'.$data['question_fi'].'/files/';
+						if (!file_exists($new_path))
+						{
+							ilUtil::makeDirParents($new_path);
+						}
+						$filename =  basename($path) . time()  . '.jpg';
+						if (!copy($path, $new_path . basename($filename)))
+						{
+							print "image could not be copied!!!! ";
+						}
+						else
+						{
+							$ilDB->update('tst_solutions',
+								array(
+									'value1' => array('text', basename($filename)),
+									'value2' => array('text', basename($path))
+								),
+								array(
+									'solution_id' => array('integer', $data['solution_id']),
+								));
+						}
+				}
+			}
+		}
+	}
+
 	function copyImage($question_id, $source_questionpool)
 	{
 		$imagepath = $this->getImagePath();
@@ -668,7 +714,7 @@ class assFreestyleScanQuestion extends assQuestion implements ilObjQuestionScori
 			$test_id = $row["test_fi"];
 		}
 
-		$this->getProcessLocker()->requestUserSolutionUpdateLock();
+		#$this->getProcessLocker()->requestUserSolutionUpdateLock();
 
 		$this->updateCurrentSolutionsAuthorization($active_id, $pass, $authorized);
 
@@ -704,7 +750,7 @@ class assFreestyleScanQuestion extends assQuestion implements ilObjQuestionScori
 			$entered_values = true;
 		}
 
-		$this->getProcessLocker()->releaseUserSolutionUpdateLock();
+		#$this->getProcessLocker()->releaseUserSolutionUpdateLock();
 
 		require_once 'Modules/Test/classes/class.ilObjAssessmentFolder.php';
 		if($entered_values)
@@ -811,16 +857,16 @@ class assFreestyleScanQuestion extends assQuestion implements ilObjQuestionScori
 	/**
 	 * @inheritdoc
 	 */
-	public function setExportDetailsXLS(&$worksheet, $startrow, $active_id, $pass, &$format_title, &$format_bold)
+	public function setExportDetailsXLS($worksheet, $startrow, $active_id, $pass)
 	{
 		require_once 'Services/Excel/classes/class.ilExcelUtils.php';
-		$worksheet->writeString($startrow, 0, ilExcelUtils::_convert_text($this->lng->txt($this->getQuestionType())), $format_title);
-		$worksheet->writeString($startrow, 1, ilExcelUtils::_convert_text($this->getTitle()), $format_title);
+		$worksheet->writeString($startrow, 0, ilExcelUtils::_convert_text($this->lng->txt($this->getQuestionType())));
+		$worksheet->writeString($startrow, 1, ilExcelUtils::_convert_text($this->getTitle()));
 		$i = 1;
 		$solutions = $this->getSolutionValues($active_id, $pass);
 		foreach ($solutions as $solution)
 		{
-			$worksheet->writeString($startrow + $i, 0, ilExcelUtils::_convert_text($this->lng->txt('result')), $format_bold);
+			$worksheet->writeString($startrow + $i, 0, ilExcelUtils::_convert_text($this->lng->txt('result')));
 			if (strlen($solution['value1']))
 			{
 				$worksheet->write($startrow + $i, 1, ilExcelUtils::_convert_text($solution['value1']));
