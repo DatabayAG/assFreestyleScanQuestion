@@ -1,5 +1,6 @@
 # ILIAS assFreestyleScanQuestion Plugin
 * For ILIAS versions: 5.1.0 - 5.2.999
+* This is a special Question Plugin which only makes sense to use with the ScanAssessment Plugin
 
 ## Installation Instructions
 1. Clone this repository to /Customizing/global/plugins/Modules/TestQuestionPool/Questions/assFreestyleScanQuestion
