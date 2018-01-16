@@ -386,7 +386,7 @@ class assFreestyleScanQuestion extends assQuestion implements ilObjQuestionScori
 				);
 				$row = $ilDB->fetchAssoc($tst_active);
 				$test_id = $row["test_fi"];
-				if(substr( $path, 0, 34 ) === './data/default/scanAssessment/tst_')
+				if(substr( $path, 0, 34 ) === ILIAS_DATA_DIR . '/scanAssessment/tst_')
 				{
 						$new_path = CLIENT_WEB_DIR . '/assessment/tst_'.$test_id.'/'.$data["active_fi"].'/'.$data['question_fi'].'/files/';
 						if (!file_exists($new_path))
