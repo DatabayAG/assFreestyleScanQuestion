@@ -3,6 +3,7 @@
 
 require_once 'Modules/TestQuestionPool/classes/class.assQuestionGUI.php';
 require_once './Modules/TestQuestionPool/interfaces/interface.ilGuiQuestionScoringAdjustable.php';
+require_once 'Customizing/global/plugins/Modules/TestQuestionPool/Questions/assFreestyleScanQuestion/classes/class.assFreestyleQuestionFileTableGUI.php';
 
 /**
  * @ilCtrl_isCalledBy assFreestyleScanQuestionGUI: ilObjQuestionPoolGUI, ilObjTestGUI, ilTestOutputGUI
@@ -132,8 +133,7 @@ class assFreestyleScanQuestionGUI extends assQuestionGUI implements ilGuiQuestio
 		if(is_object($this->getPreviewSession()))
 		{
 			$files = $this->object->getPreviewFileUploads($this->getPreviewSession());
-			require_once 'Modules/TestQuestionPool/classes/tables/class.assFileUploadFileTableGUI.php';
-			$table_gui = new assFileUploadFileTableGUI(null , $this->getQuestionActionCmd(), 'ilAssQuestionPreview');
+			$table_gui = new assFreestyleQuestionFileTableGUI(null , $this->getQuestionActionCmd(), 'ilAssQuestionPreview');
 			$table_gui->setTitle($this->lng->txt('already_delivered_files'), 'icon_file.svg', $this->lng->txt('already_delivered_files'));
 			$table_gui->setData($files);
 			$table_gui->init();
@@ -192,8 +192,7 @@ class assFreestyleScanQuestionGUI extends assQuestionGUI implements ilGuiQuestio
 			$solutions = $this->object->getSolutionValues($active_id, $pass);
 
 			$files = ($show_manual_scoring) ? $this->object->getUploadedFilesForWeb($active_id, $pass) : $this->object->getUploadedFiles($active_id, $pass);
-			include_once "./Modules/TestQuestionPool/classes/tables/class.assFileUploadFileTableGUI.php";
-			$table_gui = new assFileUploadFileTableGUI($this->getTargetGuiClass(), 'gotoquestion');
+			$table_gui = new assFreestyleQuestionFileTableGUI($this->getTargetGuiClass(), 'gotoquestion');
 			$table_gui->setTitle($this->lng->txt('already_delivered_files'), 'icon_file.svg', $this->lng->txt('already_delivered_files'));
 			$table_gui->setData($files);
 			$table_gui->init();

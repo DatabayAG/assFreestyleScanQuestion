@@ -379,36 +379,37 @@ class assFreestyleScanQuestion extends assQuestion implements ilObjQuestionScori
 		{
 			while ($data = $ilDB->fetchAssoc($result))
 			{
-				$path = $data['value1'];
-				$tst_active = $ilDB->queryF("SELECT test_fi FROM tst_active WHERE active_id = %s",
+				$tst_active = $ilDB->queryF("SELECT obj_fi FROM tst_active INNER JOIN tst_tests ON test_fi = test_id WHERE active_id = %s",
 					array('integer'),
 					array($data["active_fi"])
 				);
 				$row = $ilDB->fetchAssoc($tst_active);
-				$test_id = $row["test_fi"];
-				if(substr($path, 0, strlen('./data/' .CLIENT_NAME. '/scanAssessment/tst_')) === './data/' .CLIENT_NAME. '/scanAssessment/tst_')
+				$test_id = $row["obj_fi"];
+				$from_file = $data['value1'];
+				if(file_exists($from_file))
 				{
-						$new_path = CLIENT_WEB_DIR . '/assessment/tst_'.$test_id.'/'.$data["active_fi"].'/'.$data['question_fi'].'/files/';
-						if (!file_exists($new_path))
-						{
-							ilUtil::makeDirParents($new_path);
-						}
-						$filename =  basename($path) . time()  . '.jpg';
-						if (!copy($path, $new_path . basename($filename)))
-						{
-							print "image could not be copied!!!! ";
-						}
-						else
-						{
-							$ilDB->update('tst_solutions',
-								array(
-									'value1' => array('text', basename($filename)),
-									'value2' => array('text', basename($path))
-								),
-								array(
-									'solution_id' => array('integer', $data['solution_id']),
-								));
-						}
+					$new_path = CLIENT_WEB_DIR . '/assessment/tst_'.$test_id.'/'.$data["active_fi"].'/'.$data['question_fi'].'/files/';
+					if (!file_exists($new_path))
+					{
+						ilUtil::makeDirParents($new_path);
+					}
+					$filename =  basename($from_file);
+					if (!copy($from_file, $new_path . $filename))
+					{
+						print "image could not be copied!!!! ";
+					}
+					else
+					{
+						$ilDB->update('tst_solutions',
+							array(
+								'value1' => array('text', basename($filename)),
+								'value2' => array('text', basename($from_file))
+							),
+							array(
+								'solution_id' => array('integer', $data['solution_id']),
+							));
+					}
+
 				}
 			}
 		}
@@ -552,7 +553,7 @@ class assFreestyleScanQuestion extends assQuestion implements ilObjQuestionScori
 	{
 		if (is_null($question_id)) $question_id = $this->getId();
 		include_once "./Services/Utilities/classes/class.ilUtil.php";
-		$webdir = ilUtil::removeTrailingPathSeparators(CLIENT_WEB_DIR) . "/assessment/tst_$test_id/$active_id/$question_id/files/";
+		$webdir = ilUtil::removeTrailingPathSeparators(CLIENT_WEB_DIR) . '/assessment/tst_'.$test_id.'/'.$active_id.'/'.$question_id.'/files/';
 		return str_replace(ilUtil::removeTrailingPathSeparators(ILIAS_ABSOLUTE_PATH), ilUtil::removeTrailingPathSeparators(ILIAS_HTTP_PATH), $webdir);
 	}
 
@@ -605,14 +606,14 @@ class assFreestyleScanQuestion extends assQuestion implements ilObjQuestionScori
 		global $ilDB;
 
 		$found = $this->getUploadedFiles($active_id, $pass);
-		$result = $ilDB->queryF("SELECT test_fi FROM tst_active WHERE active_id = %s",
+		$result = $ilDB->queryF("SELECT obj_fi FROM tst_active INNER JOIN tst_tests ON test_fi = test_id WHERE active_id = %s",
 			array('integer'),
 			array($active_id)
 		);
 		if ($result->numRows() == 1)
 		{
 			$row = $ilDB->fetchAssoc($result);
-			$test_id = $row["test_fi"];
+			$test_id = $row["obj_fi"];
 			$path = $this->getFileUploadPathWeb($test_id, $active_id);
 			foreach ($found as $idx => $data)
 			{
